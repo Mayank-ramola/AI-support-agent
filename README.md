@@ -134,12 +134,16 @@ The eval prints the average retrieval relevance for questions the knowledge base
 - Message length, request size and session id format are validated.
 - The admin login is a single account from environment variables, which is fine for a demo. A production system would use per-user accounts.
 
-## Deploy
+## Deploy (GitHub Pages + Render)
 
-- **API:** Render web service, root directory `server`, build `npm install`, start `npm start`. Add all variables from `.env.example`. Set `DASHBOARD_ORIGIN` to the dashboard URL. After the first deploy, run `npm run seed` and `npm run ingest` once (Render shell, or locally with the production `MONGODB_URI`).
-- **Dashboard:** Vercel, root directory `dashboard`, framework Vite, environment variable `VITE_API_URL=https://<api>.onrender.com/api`.
-- **Store:** Netlify, Vercel or GitHub Pages from the `demo-store` folder. Set `API` in `demo-store/src/js/chat-loader.js` to your API URL.
-- Render's free tier sleeps when idle, so the first chat after a pause can take about 30 seconds.
+GitHub Pages serves only static files, so the store and dashboard go on GitHub Pages and the API goes on Render. MongoDB lives on Atlas.
+
+1. **Database:** in MongoDB Atlas, allow access from `0.0.0.0/0` (Network Access) and copy the connection string.
+2. **API on Render:** New > Web Service, pick this repo, root directory `server`, build command `npm install`, start command `npm start`. Add every variable from `server/.env.example`. Set `DASHBOARD_ORIGIN` to `https://YOUR-GITHUB-USERNAME.github.io` (the origin only, no path, all lowercase). After it deploys, run `npm run seed` and `npm run ingest` once from your computer with the production `MONGODB_URI` in `server/.env`.
+3. **Site on GitHub Pages:** in the repo go to Settings > Secrets and variables > Actions > Variables and add `API_URL` = your Render URL (no trailing slash). Then Settings > Pages > Source: **GitHub Actions**. Push to `main` (or run the workflow from the Actions tab). The workflow in `.github/workflows/pages.yml` builds the dashboard and publishes:
+   - `https://YOUR-GITHUB-USERNAME.github.io/REPO-NAME/` is the store with the chat widget
+   - `https://YOUR-GITHUB-USERNAME.github.io/REPO-NAME/admin/` is the admin dashboard
+4. Render's free tier sleeps when idle, so the first chat after a pause can take about 30 seconds.
 
 ## Limitations
 

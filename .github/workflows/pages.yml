@@ -1,0 +1,65 @@
+# Publishes the demo store (site root) and the admin dashboard (/admin) to GitHub Pages.
+# Needs one repository variable: API_URL = your deployed API, e.g. https://my-api.onrender.com (no trailing slash)
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Check API_URL is set
+        run: |
+          if [ -z "${{ vars.API_URL }}" ]; then echo "Set the API_URL repository variable first (Settings > Secrets and variables > Actions > Variables)."; exit 1; fi
+
+      - name: Build dashboard
+        working-directory: dashboard
+        env:
+          VITE_API_URL: ${{ vars.API_URL }}/api
+        run: |
+          npm ci
+          npm run build
+
+      - name: Assemble site
+        run: |
+          mkdir site
+          cp -r demo-store/. site/
+          mkdir site/admin
+          cp -r dashboard/dist/. site/admin/
+          sed -i "s#http://localhost:5000#${{ vars.API_URL }}#" site/src/js/chat-loader.js
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
